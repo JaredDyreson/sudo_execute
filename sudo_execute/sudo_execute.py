@@ -5,12 +5,39 @@ We probably should instantiate a global sudo_execute instead of re running it ev
 ^ This is going to be put inside the SiteConfig and BuildConfig later so it can be referenced for unit testing
 """
 
-from exceptions import *
+"""
+MessageException from Kevin Wortman
+"""
+
+import subprocess
+import types
+import pwd
+from functools import partial
+import os
+
+class MessageException(Exception):
+    def __init__(self, message):
+        if not (isinstance(message, str)):
+            raise ValueError
+        self.message = message
+
+# issue reported when sudo_execute class cannot find a given user
+# use for internal API
+
+class UnknownUserException(MessageException):
+    def __init__(self, message):
+        super().__init__(message)
+
+# issue reported when root code execution is invoked by non privilaged user
+# use for internal API
+
+class PrivilageExecutionException(MessageException):
+    def __init__(self, message):
+        super().__init__(message)
 
 class sudo_execute():
     def __init__(self):
         self.main_user = ""
-        pass
 
     def current_user(self) -> str:
         return subprocess.check_output(["whoami"], encoding="utf-8").strip()
@@ -53,7 +80,7 @@ class sudo_execute():
         except KeyError:
             return False
 
-    def run_permanent(self, command: str, current_user: str, desired_user: str):
+    def run_permanent(self, func: types.FunctionType, current_user: str, desired_user: str):
         """
         GOAL: run command as another user but permanently changing to that user
         Cannot be run twice in a row if script is originated with sudo
@@ -68,20 +95,36 @@ class sudo_execute():
 
         du_id, du_gid = du_records.pw_uid, du_records.pw_gid
         cu_id, cu_gid = cu_records.pw_uid, cu_records.pw_gid
+        self.chuser(du_id, du_gid)
         try:
-            stdout, stderr = subprocess.Popen(command.split(), 
-                                close_fds=True,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                preexec_fn=chuser(du_id, du_gid),
-                                encoding="utf-8").communicate()
+            try:
+
+                """
+                We want to return console output
+                """
+
+                if(func.func.__name__ in dir(self)):
+                    return func()
+            except AttributeError:
+                """
+                This is just regular blocks of Python code that can be run
+                """
+
+                func()
         except PermissionError:
             raise PrivilageExecutionException("{} does not have permission to run the command {} as the user {}".format(
                             current_user,
                             command,
                             desired_user
             ))
-        return stdout
+    
+
+    def run_shell_process_permanent(self, command: str):
+        return subprocess.Popen(command.split(), 
+                            close_fds=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            encoding="utf-8").communicate()
 
     def run_soft(self, command: str, desired_user: str):
         command = "sudo -H -u {} bash -c '{}'".format(desired_user, command)
@@ -96,4 +139,3 @@ class sudo_execute():
             else:
                 raise Exception("Segmentation fault")
         return out
-

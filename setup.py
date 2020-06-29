@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 import sys
 
-PKG_NAME = "sudo_exectute"
+PKG_NAME = "sudo_execute"
 
 _here = os.path.abspath(os.path.dirname(__file__))
 
