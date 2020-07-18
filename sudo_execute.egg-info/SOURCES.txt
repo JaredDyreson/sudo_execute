@@ -1,0 +1,8 @@
+README.md
+setup.py
+sudo_execute/sudo_execute.py
+sudo_execute/version.py
+sudo_execute.egg-info/PKG-INFO
+sudo_execute.egg-info/SOURCES.txt
+sudo_execute.egg-info/dependency_links.txt
+sudo_execute.egg-info/top_level.txt

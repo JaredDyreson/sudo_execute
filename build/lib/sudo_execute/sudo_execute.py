@@ -52,8 +52,8 @@ class sudo_execute():
             while(whoami is None):
                 selection = {}
                 for index, user in enumerate(logged_in):
-                    selection[index] = user
-                    print(f'[{index}] {user}')
+                    selection[index] =  user
+                    print("[{}] {}".format(index, user))
                 whoami = input("Select who you are: ")
                 try:
                     whoami = self.main_user = selection[int(whoami)]
@@ -69,17 +69,11 @@ class sudo_execute():
         """
         GOAL: permanently change the user in the context of the running program
         """
-        if not(isinstance(user_id, int) and
-               isinstance(user_gid, int)):
-               raise ValueError
 
         os.setgid(user_gid)
         os.setuid(user_id)
 
     def check_user(self, user: str):
-        if not(isinstance(user, str)):
-            raise ValueError
-
         try:
             pwd.getpwnam(user)
             return True
@@ -87,9 +81,6 @@ class sudo_execute():
             return False
 
     def swap_user(self, user: str):
-        if not(isinstance(user, str)):
-            raise ValueError
-
         if(self.check_user(user)):
             du_records = pwd.getpwnam(user)
         else:
@@ -105,10 +96,6 @@ class sudo_execute():
         Only root can set UID and GID back to itself, ultimately making it redundant
         Used primarliy for descalation of privilages, handing back to userspace
         """
-        if not(isinstance(func, types.FunctionType) and
-               isinstance(current_user, str) and
-               isinstance(desired_user, str)):
-               raise ValueError
 
         self.swap_user(desired_user)
         try:
@@ -117,6 +104,8 @@ class sudo_execute():
             We want to return console output
             """
             return func()
+
+            # return func() if isinstance(func, partial) else func()
 
         except PermissionError:
             raise PrivilageExecutionException("{} does not have permission to run the command {} as the user {}".format(
@@ -127,21 +116,14 @@ class sudo_execute():
     
 
     def run_shell_process_permanent(self, command: str):
-        if not(isinstance(command, str)):
-            raise ValueError
-
         return subprocess.Popen(command.split(), 
                             close_fds=True,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             encoding="utf-8").communicate()
 
-    def run_soft(self, shell_command: str, desired_user: str):
-        if not(isinstance(shell_command, str) and
-               isinstance(desired_user, str)):
-               raise ValueError
-
-        command = f'sudo -H -u {desired_user} bash -c \'{shell_command}\''
+    def run_soft(self, command: str, desired_user: str):
+        command = "sudo -H -u {} bash -c '{}'".format(desired_user, command)
         try:
             out =  subprocess.check_output(command, 
                                             shell=True, 
